@@ -114,147 +114,140 @@ To decrypt, use the INVERSE (opposite) of the last 3 rules, and the 1st as-is (d
 ## PROGRAM:
 ```
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 
-#define SIZE 5
-
-void prepareKeyTable(char key[], char keyTable[SIZE][SIZE]) {
-    int i, j, k, flag = 0, *dicty;
+#define SIZE 30
+void toLowerCase(char plain[], int ps) {
+    int i;
+    for (i = 0; i < ps; i++) {
+        if (plain[i] >= 65 && plain[i] <= 90) 
+            plain[i] += 32;
+    }
+}
+int removeSpaces(char* plain, int ps) {
+    int i, count = 0;
+    for (i = 0; i < ps; i++) {
+        if (plain[i] != ' ')
+            plain[count++] = plain[i];
+    }
+    plain[count] = '\0';
+    return count;
+}
+void generateKeyTable(char key[], int ks, char keyT[5][5]) {
+    int i, j, k;
+    int* dicty;
 
     dicty = (int*)calloc(26, sizeof(int));
-
-    for (i = 0; i < SIZE; i++) {
-        for (j = 0; j < SIZE; j++) {
-            keyTable[i][j] = ' ';
-        }
+    for (i = 0; i < ks; i++) {
+        if (key[i] != 'j') // Treat 'j' as 'i'
+            dicty[key[i] - 97] = 2;
     }
 
-    for (i = 0, k = 0; i < strlen(key); i++) {
-        if (key[i] != 'j' && dicty[key[i] - 'a'] == 0) {
-            keyTable[k / SIZE][k % SIZE] = key[i];
-            dicty[key[i] - 'a'] = 1;
-            k++;
+    dicty['j' - 97] = 1; 
+
+    i = 0;
+    j = 0;
+    for (k = 0; k < ks; k++) {
+        if (dicty[key[k] - 97] == 2) {
+            dicty[key[k] - 97] -= 1;
+            keyT[i][j] = key[k];
+            j++;
+            if (j == 5) {
+                i++;
+                j = 0;
+            }
         }
     }
-
-    for (i = 0; i < 26; i++) {
-        if (i != 'j' - 'a' && dicty[i] == 0) {
-            keyTable[k / SIZE][k % SIZE] = (char)(i + 'a');
-            k++;
+    for (k = 0; k < 26; k++) {
+        if (dicty[k] == 0) {
+            keyT[i][j] = (char)(k + 97);
+            j++;
+            if (j == 5) {
+                i++;
+                j = 0;
+            }
         }
     }
 
     free(dicty);
 }
-
-void search(char keyTable[SIZE][SIZE], char a, char b, int arr[]) {
+void search(char keyT[5][5], char a, char b, int arr[]) {
     int i, j;
 
-    if (a == 'j')
-        a = 'i';
-    else if (b == 'j')
-        b = 'i';
+    if (a == 'j') a = 'i';
+    if (b == 'j') b = 'i';
 
-    for (i = 0; i < SIZE; i++) {
-        for (j = 0; j < SIZE; j++) {
-            if (keyTable[i][j] == a) {
+    for (i = 0; i < 5; i++) {
+        for (j = 0; j < 5; j++) {
+            if (keyT[i][j] == a) {
                 arr[0] = i;
                 arr[1] = j;
-            } else if (keyTable[i][j] == b) {
+            } else if (keyT[i][j] == b) {
                 arr[2] = i;
                 arr[3] = j;
             }
         }
     }
-}
-
 int mod5(int a) {
     return (a % 5);
 }
 
-void encrypt(char str[], char keyTable[SIZE][SIZE]) {
+// Function to make the plain text length to be even
+int prepare(char str[], int ptrs) {
+    if (ptrs % 2 != 0) {
+        str[ptrs++] = 'z';  
+        str[ptrs] = '\0';
+    }
+    return ptrs;
+}
+void encrypt(char str[], char keyT[5][5], int ps) {
     int i, a[4];
 
-    for (i = 0; i < strlen(str); i += 2) {
-        search(keyTable, str[i], str[i + 1], a);
-
-        if (a[0] == a[2]) {
-            str[i] = keyTable[a[0]][mod5(a[1] + 1)];
-            str[i + 1] = keyTable[a[2]][mod5(a[3] + 1)];
-        } else if (a[1] == a[3]) {
-            str[i] = keyTable[mod5(a[0] + 1)][a[1]];
-            str[i + 1] = keyTable[mod5(a[2] + 1)][a[3]];
-        } else {
-            str[i] = keyTable[a[0]][a[3]];
-            str[i + 1] = keyTable[a[2]][a[1]];
+    for (i = 0; i < ps; i += 2) {
+        search(keyT, str[i], str[i + 1], a);
+        
+        if (a[0] == a[2]) {  // Same row
+            str[i] = keyT[a[0]][mod5(a[1] + 1)];
+            str[i + 1] = keyT[a[0]][mod5(a[3] + 1)];
+        } else if (a[1] == a[3]) {  // Same column
+            str[i] = keyT[mod5(a[0] + 1)][a[1]];
+            str[i + 1] = keyT[mod5(a[2] + 1)][a[1]];
+        } else {  // Rectangle swap
+            str[i] = keyT[a[0]][a[3]];
+            str[i + 1] = keyT[a[2]][a[1]];
         }
     }
 }
-
-void removeSpaces(char* str) {
-    int count = 0;
-
-    for (int i = 0; str[i]; i++) {
-        if (str[i] != ' ')
-            str[count++] = str[i];
-    }
-
-    str[count] = '\0';
+void encryptByPlayfairCipher(char str[], char key[]) {
+    int ps, ks;
+    char keyT[5][5];
+    ks = strlen(key);
+    ks = removeSpaces(key, ks);
+    toLowerCase(key, ks);
+    ps = strlen(str);
+    toLowerCase(str, ps);
+    ps = removeSpaces(str, ps);
+    ps = prepare(str, ps);
+    generateKeyTable(key, ks, keyT);
+    encrypt(str, keyT, ps);
 }
-
-void prepareText(char str[]) {
-    int i, j;
-
-    for (i = 0; i < strlen(str); i++) {
-        if (str[i] == 'j')
-            str[i] = 'i';
-    }
-
-    for (i = 0; i < strlen(str); i += 2) {
-        if (str[i + 1] == '\0') {
-            break;
-        }
-
-        if (str[i] == str[i + 1]) {
-            for (j = strlen(str) + 1; j > i + 1; j--) {
-                str[j] = str[j - 1];
-            }
-            str[i + 1] = 'x';
-        }
-    }
-
-    if (strlen(str) % 2 != 0) {
-        str[strlen(str)] = 'x';
-        str[strlen(str) + 1] = '\0';
-    }
-}
-
 int main() {
-    char key[SIZE * SIZE], str[100], keyTable[SIZE][SIZE];
-
-    printf("Enter the key (no spaces): ");
-    scanf("%s", key);
-
-    printf("Enter the plaintext: ");
-    scanf("%s", str);
-
-    // Prepare key table
-    prepareKeyTable(key, keyTable);
-
-    // Prepare the text
-    prepareText(str);
-
-    // Encrypt the text
-    encrypt(str, keyTable);
-
-    printf("Encrypted text: %s\n", str);
+    char str[SIZE], key[SIZE];
+    strcpy(key, "ADHI");
+    printf("Key text: %s\n", key);
+    strcpy(str, "ADHITHYA SARAVANAN");
+    printf("Plain text: %s\n", str);
+    encryptByPlayfairCipher(str, key);
+    printf("Cipher text: %s\n", str);
 
     return 0;
 }
 ```
 
 ## OUTPUT:
+![Screenshot 2024-08-30 142352](https://github.com/user-attachments/assets/ad42cfe1-1cf0-4a11-a3b5-a17263010361)
+
 
 
 ## RESULT:
