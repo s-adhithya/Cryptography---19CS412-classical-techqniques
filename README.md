@@ -419,83 +419,39 @@ The Vigenere cipher is a method of encrypting alphabetic text by using a series 
 ## PROGRAM:
 ```
 #include <stdio.h>
-#include <stdlib.h>  // For exit() function
-#include <ctype.h>   // For toupper() function
-#include <string.h>  // For strlen() function
-
-void encipher();
-void decipher();
-
+#include <string.h>
+void vigenereEncrypt(char *message, char *key) {
+    int messageLen = strlen(message);
+    int keyLen = strlen(key);
+    char cipherText[messageLen];
+    for (int i = 0; i < messageLen; i++) {
+        cipherText[i] = ((message[i] - 'A') + (key[i % keyLen] - 'A')) % 26 + 'A';
+    }
+    cipherText[messageLen] = '\0';
+    printf("Encrypted Message: %s\n", cipherText);
+}
+void vigenereDecrypt(char *cipherText, char *key) {
+    int cipherLen = strlen(cipherText);
+    int keyLen = strlen(key);
+    char decryptedText[cipherLen];
+    for (int i = 0; i < cipherLen; i++) {
+        decryptedText[i] = ((cipherText[i] - 'A') - (key[i % keyLen] - 'A') + 26) % 26 + 'A';
+    }
+    decryptedText[cipherLen] = '\0';
+    printf("Decrypted Message: %s\n", decryptedText);
+}
 int main() {
-    int choice;
-    while (1) {
-        printf("\n1. Encrypt Text");
-        printf("\n2. Decrypt Text");
-        printf("\n3. Exit");
-        printf("\n\nEnter Your Choice: ");
-        scanf("%d", &choice);
-
-        if (choice == 3)
-            exit(0);
-        else if (choice == 1)
-            encipher();
-        else if (choice == 2)
-            decipher();
-        else
-            printf("Please Enter a Valid Option.\n");
-    }
-    return 0;  // Added return statement for the main function
-}
-
-void encipher() {
-    unsigned int i, j;
-    char input[50], key[10];
-
-    printf("\n\nEnter Plain Text: ");
-    scanf("%s", input);  // Removed newline for better input handling
-
-    printf("Enter Key Value: ");
-    scanf("%s", key);
-
-    printf("Resultant Cipher Text: ");
-    for (i = 0, j = 0; i < strlen(input); i++, j++) {
-        if (j >= strlen(key)) {
-            j = 0;
-        }
-        printf("%c", 65 + (((toupper(input[i]) - 65) + (toupper(key[j]) - 65)) % 26));
-    }
-    printf("\n");  // Added newline for output formatting
-}
-
-void decipher() {
-    unsigned int i, j;
-    char input[50], key[10];
-    int value;
-
-    printf("\n\nEnter Cipher Text: ");
-    scanf("%s", input);  // Removed newline for better input handling
-
-    printf("Enter the Key Value: ");
-    scanf("%s", key);
-
-    printf("Resultant Plain Text: ");
-    for (i = 0, j = 0; i < strlen(input); i++, j++) {
-        if (j >= strlen(key)) {
-            j = 0;
-        }
-
-        // Calculate the decrypted character value
-        value = (toupper(input[i]) - 65) - (toupper(key[j]) - 65);
-        if (value < 0) {
-            value += 26;  // Correct for negative values in circular shift
-        }
-        printf("%c", 65 + (value % 26));
-    }
-    printf("\n");  // Added newline for output formatting
+    char message[] = "HELLO"; // Example message
+    char key[] = "KEY"; // Example key
+    printf("Original Message: %s\n", message);
+    vigenereEncrypt(message, key); // Encrypt the message
+    char cipherText[] = "RIJVS"; // Example cipher text
+    vigenereDecrypt(cipherText, key); // Decrypt the cipher text
+    return 0;
 }
 ```
 ## OUTPUT:
-![Screenshot 2024-08-30 143349](https://github.com/user-attachments/assets/afc568ee-0364-4de5-a2da-42740aae9f84)
+![Screenshot 2024-11-17 094413](https://github.com/user-attachments/assets/5efc7105-c6e1-4132-a008-65bfc14aa1cb)
 
 ## RESULT:
 The program is executed successfully
